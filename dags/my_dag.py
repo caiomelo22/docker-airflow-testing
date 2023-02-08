@@ -3,8 +3,16 @@ Code that goes along with the Airflow located at:
 http://airflow.readthedocs.org/en/latest/tutorial.html
 """
 from airflow import DAG
-from airflow.operators.bash_operator import BashOperator
+from airflow.operators.python_operator import PythonOperator
 from datetime import datetime, timedelta
+
+def python_task_1():
+    print('Caio ran this task firstly!')
+    print(f"Caio's time right now: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
+def python_task_2():
+    print('Caio ran this task secondly!')
+    print(f"Caio's time right now: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
 
 
 default_args = {
@@ -22,27 +30,10 @@ default_args = {
     # 'end_date': datetime(2016, 1, 1),
 }
 
-dag = DAG("tutorial", default_args=default_args, schedule_interval=timedelta(1))
+dag = DAG("my_dag", default_args=default_args, schedule_interval=timedelta(minutes=1), catchup=False)
 
 # t1, t2 and t3 are examples of tasks created by instantiating operators
-t1 = BashOperator(task_id="print_date", bash_command="date", dag=dag)
+t1 = PythonOperator(task_id="python_task_1", python_callable=python_task_1, dag=dag)
+t2 = PythonOperator(task_id="python_task_2", python_callable=python_task_2, dag=dag)
 
-t2 = BashOperator(task_id="sleep", bash_command="sleep 5", retries=3, dag=dag)
-
-templated_command = """
-    {% for i in range(5) %}
-        echo "{{ ds }}"
-        echo "{{ macros.ds_add(ds, 7)}}"
-        echo "{{ params.my_param }}"
-    {% endfor %}
-"""
-
-t3 = BashOperator(
-    task_id="templated",
-    bash_command=templated_command,
-    params={"my_param": "Parameter I passed in"},
-    dag=dag,
-)
-
-t2.set_upstream(t1)
-t3.set_upstream(t1)
+t1 >> t2
